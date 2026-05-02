@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — spdly.log</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="../../css/admin.css" />
+</head>
+<body class="admin-login-page">
+
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-header">
+        <a href="/" class="site-logo">spdly<span class="accent">.log</span></a>
+        <p class="login-sub">Admin access only</p>
+      </div>
+
+      <div class="login-error hidden" id="loginError"></div>
+
+      <div class="form-group">
+        <label for="loginEmail" class="form-label">Email</label>
+        <input type="email" id="loginEmail" class="form-input" placeholder="admin@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword" class="form-label">Password</label>
+        <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn-login" id="loginBtn">
+        <span id="loginBtnText">Sign in</span>
+        <span id="loginBtnLoader" class="btn-loader hidden">⟳</span>
+      </button>
+
+      <a href="/" class="login-back">← Back to blog</a>
+    </div>
+  </div>
+
+  <script type="module" src="../../js/admin-login.js"></script>
+</body>
+</html>

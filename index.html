@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ====== SEO ====== -->
+  <title>spdly.blog — Tech, Engineering & Discovery</title>
+  <meta name="description" content="A raw log of tech discoveries, engineering notes, algorithms, and problem-solving by spdly. No fluff — just signal." />
+  <meta name="keywords" content="tech blog, engineering, algorithms, programming, discoveries, spdly" />
+  <meta name="author" content="Shivaprasad V" />
+  <link rel="canonical" href="https://blog.spdly.is-a.dev/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://blog.spdly.is-a.dev/" />
+  <meta property="og:title" content="spdly.blog — Tech, Engineering & Discovery" />
+  <meta property="og:description" content="A raw log of tech discoveries, engineering notes, algorithms, and problem-solving by spdly." />
+  <meta property="og:image" content="https://blog.spdly.is-a.dev/og-image.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://blog.spdly.is-a.dev/" />
+  <meta name="twitter:title" content="spdly.blog — Tech, Engineering & Discovery" />
+  <meta name="twitter:description" content="A raw log of tech discoveries, engineering notes, algorithms, and problem-solving by spdly." />
+  <meta name="twitter:image" content="https://blog.spdly.is-a.dev/og-image.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "spdly.blog",
+    "url": "https://blog.spdly.is-a.dev/",
+    "description": "A raw log of tech discoveries, engineering notes, algorithms, and problem-solving by spdly.",
+    "author": {
+      "@type": "Person",
+      "name": "Shivaprasad V",
+      "url": "https://spdly.is-a.dev"
+    }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-group">
+        <a href="https://spdly.is-a.dev" class="back-link" title="Back to portfolio">← spdly.is-a.dev</a>
+        <a href="/" class="site-logo">spdly<span class="accent">.blog</span></a>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+          <span class="icon-sun">☀</span>
+          <span class="icon-moon">◑</span>
+        </button>
+        <a href="/admin/" class="admin-link" title="Admin">⌥</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        <span class="dot blink"></span>
+        <span>Live log</span>
+      </div>
+      <h1 class="hero-title">Tech. Engineering.<br>Discovery. Raw.</h1>
+      <p class="hero-sub">Notes on algorithms, engineering patterns, new tech, and every problem I run into. Signal over noise.</p>
+
+      <!-- SEARCH -->
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search posts..." autocomplete="on" spellcheck="false" />
+        <kbd class="search-hint">ESC to clear</kbd>
+      </div>
+    </div>
+  </section>
+
+  <!-- FILTER TAGS -->
+  <section class="tags-section">
+    <div class="container">
+      <div class="tags-scroll" id="tagsContainer">
+        <button class="tag-btn active" data-tag="all">all</button>
+        <!-- Tags injected by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- POSTS GRID -->
+  <main class="posts-section" id="main-content">
+    <div class="container">
+      <div class="posts-meta" id="postsMeta">
+        <span id="postsCount">Loading posts...</span>
+      </div>
+      <div class="posts-grid" id="postsGrid">
+        <!-- Skeletons while loading -->
+        <div class="post-card skeleton"></div>
+        <div class="post-card skeleton"></div>
+        <div class="post-card skeleton"></div>
+        <div class="post-card skeleton"></div>
+        <div class="post-card skeleton"></div>
+        <div class="post-card skeleton"></div>
+      </div>
+      <div class="empty-state hidden" id="emptyState">
+        <span class="empty-icon">∅</span>
+        <p>No posts found.</p>
+        <button onclick="clearSearch()" class="btn-clear">Clear search</button>
+      </div>
+      <div class="load-more-wrap" id="loadMoreWrap">
+        <button class="btn-load-more" id="loadMoreBtn">Load more</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span class="footer-logo">spdly<span class="accent">.blog</span></span>
+      <span class="footer-copy">Part of <a href="https://spdly.is-a.dev" target="_blank">spdly.is-a.dev</a></span>
+      <span class="footer-stack">Firebase · Vanilla JS</span>
+    </div>
+  </footer>
+
+  <script type="module" src="../js/blog.js"></script>
+</body>
+</html>

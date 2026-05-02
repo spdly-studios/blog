@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO: Dynamic meta tags will be injected by post.js -->
+  <title>Loading... — spdly.blog</title>
+  <meta name="description" content="Tech, engineering and discovery notes by spdly." />
+  <link rel="canonical" id="canonicalTag" href="https://blog.spdly.is-a.dev/post.html" />
+
+  <!-- OG (placeholders, overridden by JS) -->
+  <meta property="og:type" content="article" id="og-type" />
+  <meta property="og:url" content="https://blog.spdly.is-a.dev/" id="og-url" />
+  <meta property="og:title" content="spdly.blog" id="og-title" />
+  <meta property="og:description" content="" id="og-desc" />
+  <meta property="og:image" content="https://blog.spdly.is-a.dev/og-image.png" id="og-image" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="spdly.blog" id="tw-title" />
+  <meta name="twitter:description" content="" id="tw-desc" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="post-page">
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-group">
+        <a href="/" class="back-link">← spdly.blog</a>
+        <a href="https://spdly.is-a.dev" class="site-logo">spdly<span class="accent">.blog</span></a>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <span class="icon-sun">☀</span>
+          <span class="icon-moon">◑</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- READING PROGRESS -->
+  <div class="reading-progress" id="readingProgress"></div>
+
+  <!-- LOADING STATE -->
+  <div class="post-loading" id="postLoading">
+    <div class="container">
+      <div class="skeleton-post-header"></div>
+      <div class="skeleton-post-body"></div>
+    </div>
+  </div>
+
+  <!-- ERROR STATE -->
+  <div class="post-error hidden" id="postError">
+    <div class="container">
+      <div class="error-box">
+        <span class="error-code">404</span>
+        <h2>Post not found</h2>
+        <p>This post may have been moved or deleted.</p>
+        <a href="/" class="btn-back">Back to all posts</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST CONTENT -->
+  <article class="post-article hidden" id="postContent">
+    <div class="container post-container">
+
+      <!-- POST META / HEADER -->
+      <header class="post-header">
+        <div class="post-tags-header" id="postTagsHeader"></div>
+        <h1 class="post-title" id="postTitle"></h1>
+        <p class="post-excerpt-header" id="postExcerptHeader"></p>
+        <div class="post-byline">
+          <span class="author-avatar">S</span>
+          <div class="byline-meta">
+            <span class="author-name">Shivaprasad V</span>
+            <span class="post-date-time">
+              <span id="postDate"></span>
+              <span class="sep">·</span>
+              <span id="readTime"></span> min read
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- COVER IMAGE -->
+      <div class="post-cover" id="postCover"></div>
+
+      <!-- POST BODY -->
+      <div class="post-body" id="postBody"></div>
+
+      <!-- TAGS FOOTER -->
+      <div class="post-tags-footer" id="postTagsFooter"></div>
+
+      <!-- SHARE -->
+      <div class="post-share">
+        <span class="share-label">Share</span>
+        <button class="share-btn" id="copyLink" title="Copy link">⌘ Copy link</button>
+        <a class="share-btn" id="shareTwitter" href="#" target="_blank" rel="noopener">𝕏 Twitter</a>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- RELATED / BACK -->
+  <section class="post-nav hidden" id="postNav">
+    <div class="container">
+      <a href="/" class="btn-back-main">← All posts</a>
+      <div class="related-posts" id="relatedPosts"></div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span class="footer-logo">spdly<span class="accent">.log</span></span>
+      <span class="footer-copy">Part of <a href="https://spdly.is-a.dev" target="_blank">spdly.is-a.dev</a></span>
+      <span class="footer-stack">Firebase · Vanilla JS</span>
+    </div>
+  </footer>
+
+  <script type="module" src="../js/post.js"></script>
+</body>
+</html>
