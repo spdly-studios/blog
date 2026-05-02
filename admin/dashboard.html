@@ -11,6 +11,75 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/style.css" />
   <link rel="stylesheet" href="../../css/admin.css" />
+
+  <style>
+    /* ── Cover URL row ── */
+    .cover-url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .cover-url-row .form-input {
+      flex: 1;
+      min-width: 0;
+    }
+    .btn-cover-refresh {
+      flex-shrink: 0;
+      padding: 0 12px;
+      height: 38px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-cover-refresh:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .cover-url-hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-all;
+    }
+    .cover-error {
+      font-size: 12px;
+      color: var(--text-3);
+      font-style: italic;
+    }
+
+    /* ── Auto-tag button ── */
+    .btn-auto-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+      margin-bottom: 8px;
+    }
+    .btn-auto-tag:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .btn-auto-tag:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+    .btn-auto-tag .tag-sparkle {
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body class="admin-body">
 
@@ -118,9 +187,19 @@
               <textarea class="form-input" id="postExcerptInput" rows="2" placeholder="A brief summary shown on post cards..."></textarea>
             </div>
 
+            <!-- ── COVER IMAGE — auto-generated, editable ── -->
             <div class="form-group">
-              <label class="form-label">Cover Image URL</label>
-              <input type="url" class="form-input" id="postCoverInput" placeholder="https://..." />
+              <label class="form-label">
+                Cover Image URL
+                <span style="font-weight:400;color:var(--text-3);font-size:11px;margin-left:6px;">
+                  auto-filled from slug · edit to override
+                </span>
+              </label>
+              <div class="cover-url-row">
+                <input type="url" class="form-input" id="postCoverInput" placeholder="https://raw.githubusercontent.com/..." />
+                <button class="btn-cover-refresh" id="coverRefreshBtn" title="Re-generate URL from current slug + today's date">↺ Reset</button>
+              </div>
+              <div class="cover-url-hint" id="coverUrlHint"></div>
               <div class="cover-preview" id="coverPreview"></div>
             </div>
 
@@ -171,6 +250,12 @@
 
             <div class="editor-card">
               <h3 class="editor-card-title">Tags</h3>
+
+              <!-- Auto-tag button -->
+              <button class="btn-auto-tag" id="autoTagBtn" title="Analyse title + content and suggest relevant tags">
+                <span class="tag-sparkle">✦</span> Auto-tag from content
+              </button>
+
               <div class="tags-input-wrap">
                 <input type="text" class="form-input" id="tagInput" placeholder="Add tag and press Enter..." />
                 <div class="tags-list" id="tagsList"></div>

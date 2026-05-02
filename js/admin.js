@@ -12,7 +12,6 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth,
@@ -21,7 +20,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ============================================================
-// FIREBASE INIT — Replace with your config
+// FIREBASE INIT
 // ============================================================
 const firebaseConfig = {
   apiKey:            "AIzaSyA3PFKO5piv3RM3f9PtaAleYA_g7TOLxYk",
@@ -100,8 +99,6 @@ function showToast(msg, type = "success") {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const views = { posts: null, new: null, analytics: null };
-
 function switchView(name) {
   document.querySelectorAll(".admin-view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
@@ -157,6 +154,63 @@ function escapeHtml(str) {
 }
 
 // ============================================================
+// COVER IMAGE URL AUTO-GENERATION
+// Format: https://raw.githubusercontent.com/spdly-studios/blog-assets/
+//         refs/heads/main/{ddmmyyyy}/{slug}.png
+// ============================================================
+const GITHUB_BASE = "https://raw.githubusercontent.com/spdly-studios/blog-assets/refs/heads/main";
+
+let coverManuallyEdited = false;
+// Stores the date prefix to use — set once when a new post session starts
+let postDatePrefix = getTodayDDMMYYYY();
+
+function getTodayDDMMYYYY() {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  return `${dd}${mm}${yyyy}`;
+}
+
+function generateCoverUrl(slug) {
+  if (!slug) return "";
+  return `${GITHUB_BASE}/${postDatePrefix}/${slug}.png`;
+}
+
+function syncCoverUrl() {
+  if (coverManuallyEdited) return;
+  const slug = document.getElementById("postSlugInput").value.trim();
+  const url = generateCoverUrl(slug);
+  if (!url) return;
+
+  const coverInput = document.getElementById("postCoverInput");
+  coverInput.value = url;
+  updateCoverPreview(url);
+}
+
+function updateCoverPreview(url) {
+  const preview = document.getElementById("coverPreview");
+  if (url) {
+    preview.innerHTML = `<img src="${escapeHtml(url)}" alt="Cover preview" onerror="this.parentElement.innerHTML='<span class=cover-error>Image not found at this URL</span>'" />`;
+  } else {
+    preview.innerHTML = "";
+  }
+}
+
+// Mark cover as manually edited when the user types in it
+document.getElementById("postCoverInput").addEventListener("input", e => {
+  coverManuallyEdited = true;
+  updateCoverPreview(e.target.value.trim());
+});
+
+// Refresh button — re-generate URL discarding manual edit
+document.getElementById("coverRefreshBtn").addEventListener("click", () => {
+  coverManuallyEdited = false;
+  syncCoverUrl();
+  showToast("Cover URL regenerated");
+});
+
+// ============================================================
 // FETCH ALL POSTS
 // ============================================================
 async function fetchAllPosts() {
@@ -195,7 +249,7 @@ function renderPostsTable() {
   }
 
   tbody.innerHTML = posts.map(post => {
-    const tags = (post.tags || [])
+    const tagHtml = (post.tags || [])
       .map(t => `<span class="tag-cell">${escapeHtml(t)}</span>`)
       .join("");
     const statusBadge = `<span class="status-badge ${post.status}">${post.status}</span>`;
@@ -206,7 +260,7 @@ function renderPostsTable() {
         <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(post.title)}">
           ${escapeHtml(post.title)}
         </td>
-        <td><div class="post-tags-cell">${tags || "—"}</div></td>
+        <td><div class="post-tags-cell">${tagHtml || "—"}</div></td>
         <td>${statusBadge}</td>
         <td style="white-space:nowrap;">${formatDate(post.publishedAt || post.createdAt)}</td>
         <td>
@@ -220,7 +274,6 @@ function renderPostsTable() {
     `;
   }).join("");
 
-  // Attach events
   tbody.querySelectorAll(".btn-edit").forEach(btn => {
     btn.addEventListener("click", () => loadPostForEdit(btn.dataset.id));
   });
@@ -287,25 +340,179 @@ document.querySelectorAll(".tag-pill-btn").forEach(btn => {
 });
 
 // ============================================================
+// AUTO-TAGGER — Keyword analysis
+// ============================================================
+const TAG_RULES = {
+  "engineering": [
+    "engineer", "architect", "architecture", "system design", "backend", "frontend",
+    "software", "build", "compile", "deploy", "ci/cd", "pipeline", "microservice",
+    "monolith", "refactor", "codebase", "scalab", "performance", "latency"
+  ],
+  "algorithms": [
+    "algorithm", "complexity", "o(n)", "big o", "sort", "search", "graph",
+    "tree", "dynamic programming", "recursion", "binary", "hash", "heap",
+    "bfs", "dfs", "greedy", "divide and conquer", "data structure"
+  ],
+  "devlog": [
+    "devlog", "today i", "this week", "working on", "progress update",
+    "sprint", "milestone", "shipped", "just pushed", "day ", "week ",
+    "building my", "making a", "started", "finished", "completed"
+  ],
+  "discovery": [
+    "discover", "found out", "realized", "interesting", "learned",
+    "didn't know", "surprising", "unexpected", "rabbit hole", "turns out",
+    "fascinating", "fun fact", "came across", "stumbled"
+  ],
+  "tools": [
+    "tool", "cli", "utility", "plugin", "extension", "library", "framework",
+    "package", "npm", "pip", "brew", "cargo", "workflow", "automation",
+    "makefile", "dockerfile", "config", "dotfile"
+  ],
+  "web": [
+    "html", "css", "javascript", "browser", "http", "api", "rest", "graphql",
+    "dom", "react", "vue", "angular", "nextjs", "svelte", "astro",
+    "typescript", "jsx", "tsx", "tailwind", "fetch", "cors", "webhook",
+    "firebase", "vercel", "netlify", "cloudflare"
+  ],
+  "linux": [
+    "linux", "bash", "shell", "terminal", "unix", "grep", "awk", "sed",
+    "systemd", "kernel", "debian", "ubuntu", "arch", "fedora", "chmod",
+    "crontab", "tmux", "vim", "neovim", "zsh", "fish", "posix"
+  ],
+  "networks": [
+    "network", "tcp", "udp", "ip", "dns", "http", "socket", "protocol",
+    "packet", "firewall", "proxy", "vpn", "bandwidth", "latency", "ping",
+    "ssl", "tls", "certificate", "cdn", "load balanc", "nginx", "reverse proxy"
+  ]
+};
+
+function inferTagsFromContent(title, content) {
+  const text = `${title} ${content}`.toLowerCase();
+  const suggested = [];
+
+  for (const [tag, keywords] of Object.entries(TAG_RULES)) {
+    const score = keywords.filter(kw => text.includes(kw)).length;
+    if (score >= 1) {
+      suggested.push({ tag, score });
+    }
+  }
+
+  // Sort by score descending, return top tags
+  return suggested
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(s => s.tag);
+}
+
+async function autoTagPost() {
+  const title   = document.getElementById("postTitleInput").value.trim();
+  const content = document.getElementById("postContentInput").value.trim();
+  const excerpt = document.getElementById("postExcerptInput").value.trim();
+
+  if (!title && !content) {
+    showToast("Add a title or content first", "error");
+    return;
+  }
+
+  const btn = document.getElementById("autoTagBtn");
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Analysing…";
+
+  try {
+    // Phase 1: keyword analysis (instant, always runs)
+    const keywordTags = inferTagsFromContent(title, `${content} ${excerpt}`);
+
+    // Phase 2: Anthropic AI for richer analysis (optional, graceful fallback)
+    let aiTags = [];
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 200,
+          system: "You are a blog post tagger. Return ONLY a valid JSON array of lowercase tag strings. No explanation, no markdown, no extra text. Maximum 6 tags.",
+          messages: [{
+            role: "user",
+            content: `Suggest tags for this blog post. Prefer from this list if applicable: engineering, algorithms, devlog, discovery, tools, web, linux, networks. You may add 1-2 custom tags not in the list if strongly relevant.
+
+Title: ${title}
+Excerpt: ${excerpt}
+Content (first 1500 chars): ${content.substring(0, 1500)}`
+          }]
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const raw = (data.content || []).find(b => b.type === "text")?.text || "[]";
+        aiTags = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      }
+    } catch (_) {
+      // AI unavailable — keyword analysis is enough
+    }
+
+    // Merge: AI tags take priority, then keyword tags, deduped
+    const merged = [...new Set([...aiTags, ...keywordTags])].slice(0, 6);
+
+    if (merged.length === 0) {
+      showToast("Couldn't infer tags — add them manually", "error");
+      return;
+    }
+
+    // Add suggested tags (skip ones already present)
+    let added = 0;
+    merged.forEach(t => {
+      const clean = t.toLowerCase().trim().replace(/\s+/g, "-");
+      if (clean && !tags.includes(clean)) {
+        tags.push(clean);
+        added++;
+      }
+    });
+    renderTagsList();
+
+    if (added > 0) {
+      showToast(`Added ${added} tag${added > 1 ? "s" : ""} from content analysis`);
+    } else {
+      showToast("All suggested tags already added");
+    }
+
+  } catch (err) {
+    console.error("Auto-tag error:", err);
+    showToast("Auto-tag failed", "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById("autoTagBtn").addEventListener("click", autoTagPost);
+
+// ============================================================
 // EDITOR — SLUG AUTO-GENERATE
 // ============================================================
 const titleInput = document.getElementById("postTitleInput");
-const slugInput = document.getElementById("postSlugInput");
+const slugInput  = document.getElementById("postSlugInput");
 let slugManuallyEdited = false;
 
 titleInput.addEventListener("input", () => {
   if (!slugManuallyEdited) {
     slugInput.value = slugify(titleInput.value);
+    syncCoverUrl();
   }
   updateSeoPreview();
 });
+
 slugInput.addEventListener("input", () => {
   slugManuallyEdited = true;
+  syncCoverUrl();
 });
+
 document.getElementById("postExcerptInput").addEventListener("input", updateSeoPreview);
 
 function updateSeoPreview() {
-  document.getElementById("seoTitle").textContent = titleInput.value || "Post title";
+  document.getElementById("seoTitle").textContent =
+    titleInput.value || "Post title";
   document.getElementById("seoDesc").textContent =
     document.getElementById("postExcerptInput").value || "Post excerpt will appear here...";
 }
@@ -315,7 +522,7 @@ function updateSeoPreview() {
 // ============================================================
 let previewMode = false;
 const editorTextarea = document.getElementById("postContentInput");
-const editorPreview = document.getElementById("editorPreview");
+const editorPreview  = document.getElementById("editorPreview");
 
 document.getElementById("previewToggle").addEventListener("click", () => {
   previewMode = !previewMode;
@@ -334,18 +541,18 @@ document.getElementById("previewToggle").addEventListener("click", () => {
 // Toolbar buttons
 document.querySelectorAll(".toolbar-btn[data-md]").forEach(btn => {
   btn.addEventListener("click", () => {
-    const md = btn.dataset.md;
-    const ta = editorTextarea;
+    const md  = btn.dataset.md;
+    const ta  = editorTextarea;
     const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const sel = ta.value.substring(start, end);
-    let insert = "";
+    const end   = ta.selectionEnd;
+    const sel   = ta.value.substring(start, end);
+    let insert  = "";
     if (md.includes("$1")) {
       insert = md.replace("$1", sel);
     } else if (sel) {
-      if (md === "**bold**") insert = `**${sel}**`;
-      else if (md === "_italic_") insert = `_${sel}_`;
-      else if (md === "`code`") insert = `\`${sel}\``;
+      if (md === "**bold**")       insert = `**${sel}**`;
+      else if (md === "_italic_")  insert = `_${sel}_`;
+      else if (md === "`code`")    insert = `\`${sel}\``;
       else if (md === "[text](url)") insert = `[${sel}](url)`;
       else insert = md + sel;
     } else {
@@ -359,7 +566,6 @@ document.querySelectorAll(".toolbar-btn[data-md]").forEach(btn => {
 // Lightweight markdown for preview in admin
 function renderMarkdownAdmin(md) {
   if (!md) return "<p style='color:var(--text-3)'>Nothing to preview yet...</p>";
-  // Reuse same logic as post.js
   let html = md
     .replace(/&(?!amp;|lt;|gt;)/g, "&amp;")
     .replace(/```([^\n]*)\n([\s\S]*?)```/g, (_, lang, code) =>
@@ -387,45 +593,34 @@ function renderMarkdownAdmin(md) {
 }
 
 // ============================================================
-// COVER IMAGE PREVIEW
-// ============================================================
-document.getElementById("postCoverInput").addEventListener("input", e => {
-  const url = e.target.value.trim();
-  const preview = document.getElementById("coverPreview");
-  if (url) {
-    preview.innerHTML = `<img src="${escapeHtml(url)}" alt="Cover preview" onerror="this.parentElement.innerHTML=''" />`;
-  } else {
-    preview.innerHTML = "";
-  }
-});
-
-// ============================================================
 // LOAD POST FOR EDITING
 // ============================================================
 async function loadPostForEdit(id) {
   try {
-    const docRef = doc(db, "posts", id);
-    const snap = await getDoc(docRef);
+    const snap = await getDoc(doc(db, "posts", id));
     if (!snap.exists()) { showToast("Post not found", "error"); return; }
 
     const post = snap.data();
     editingPostId = id;
     slugManuallyEdited = true;
+    coverManuallyEdited = true; // existing post — keep its cover URL as-is
     tags = post.tags || [];
 
-    document.getElementById("editPostId").value = id;
-    document.getElementById("postTitleInput").value = post.title || "";
-    document.getElementById("postSlugInput").value = post.slug || id;
-    document.getElementById("postExcerptInput").value = post.excerpt || "";
-    document.getElementById("postCoverInput").value = post.coverImage || "";
-    document.getElementById("postContentInput").value = post.content || "";
-    document.getElementById("postStatusInput").value = post.status || "draft";
-
+    // Extract date prefix from existing cover URL if possible, so refresh works correctly
     if (post.coverImage) {
-      document.getElementById("coverPreview").innerHTML =
-        `<img src="${escapeHtml(post.coverImage)}" alt="Cover" onerror="this.parentElement.innerHTML=''" />`;
+      const match = post.coverImage.match(/\/main\/(\d{8})\//);
+      if (match) postDatePrefix = match[1];
     }
 
+    document.getElementById("editPostId").value       = id;
+    document.getElementById("postTitleInput").value   = post.title || "";
+    document.getElementById("postSlugInput").value    = post.slug || id;
+    document.getElementById("postExcerptInput").value = post.excerpt || "";
+    document.getElementById("postCoverInput").value   = post.coverImage || "";
+    document.getElementById("postContentInput").value = post.content || "";
+    document.getElementById("postStatusInput").value  = post.status || "draft";
+
+    updateCoverPreview(post.coverImage || "");
     renderTagsList();
     updateSeoPreview();
 
@@ -447,16 +642,18 @@ async function loadPostForEdit(id) {
 // RESET EDITOR
 // ============================================================
 function resetEditor() {
-  editingPostId = null;
-  slugManuallyEdited = false;
+  editingPostId       = null;
+  slugManuallyEdited  = false;
+  coverManuallyEdited = false;
+  postDatePrefix      = getTodayDDMMYYYY(); // fresh date for new post
   tags = [];
-  document.getElementById("editPostId").value = "";
-  document.getElementById("postTitleInput").value = "";
-  document.getElementById("postSlugInput").value = "";
+  document.getElementById("editPostId").value       = "";
+  document.getElementById("postTitleInput").value   = "";
+  document.getElementById("postSlugInput").value    = "";
   document.getElementById("postExcerptInput").value = "";
-  document.getElementById("postCoverInput").value = "";
+  document.getElementById("postCoverInput").value   = "";
   document.getElementById("postContentInput").value = "";
-  document.getElementById("postStatusInput").value = "draft";
+  document.getElementById("postStatusInput").value  = "draft";
   document.getElementById("coverPreview").innerHTML = "";
   renderTagsList();
   updateSeoPreview();
@@ -470,13 +667,13 @@ function resetEditor() {
 // SAVE POST
 // ============================================================
 async function savePost(status) {
-  const title = document.getElementById("postTitleInput").value.trim();
-  const slug = document.getElementById("postSlugInput").value.trim();
-  const excerpt = document.getElementById("postExcerptInput").value.trim();
+  const title      = document.getElementById("postTitleInput").value.trim();
+  const slug       = document.getElementById("postSlugInput").value.trim();
+  const excerpt    = document.getElementById("postExcerptInput").value.trim();
   const coverImage = document.getElementById("postCoverInput").value.trim();
-  const content = document.getElementById("postContentInput").value.trim();
+  const content    = document.getElementById("postContentInput").value.trim();
 
-  if (!title) { showToast("Title is required", "error"); return; }
+  if (!title)   { showToast("Title is required", "error"); return; }
   if (!content) { showToast("Content is required", "error"); return; }
 
   const btn = status === "published"
@@ -500,9 +697,7 @@ async function savePost(status) {
     };
 
     if (editingPostId) {
-      // UPDATE
-      if (status === "published" && !postData.publishedAt) {
-        // Only set publishedAt if being published for the first time
+      if (status === "published") {
         const existing = await getDoc(doc(db, "posts", editingPostId));
         if (existing.data()?.status !== "published") {
           postData.publishedAt = now;
@@ -511,7 +706,6 @@ async function savePost(status) {
       await updateDoc(doc(db, "posts", editingPostId), postData);
       showToast(status === "published" ? "Post published!" : "Draft saved!");
     } else {
-      // CREATE
       if (status === "published") postData.publishedAt = now;
       postData.createdAt = now;
       const newDoc = await addDoc(collection(db, "posts"), postData);
@@ -520,7 +714,6 @@ async function savePost(status) {
       showToast(status === "published" ? "Post published!" : "Draft saved!");
     }
 
-    // Refresh posts list
     await fetchAllPosts();
 
   } catch (err) {
@@ -587,15 +780,15 @@ document.getElementById("deleteConfirmBtn").addEventListener("click", async () =
 // ANALYTICS VIEW
 // ============================================================
 function loadAnalytics() {
-  const total = allPosts.length;
+  const total     = allPosts.length;
   const published = allPosts.filter(p => p.status === "published").length;
-  const drafts = total - published;
-  const allTags = new Set(allPosts.flatMap(p => p.tags || []));
+  const drafts    = total - published;
+  const allTags   = new Set(allPosts.flatMap(p => p.tags || []));
 
   document.getElementById("statTotalPosts").textContent = total;
-  document.getElementById("statPublished").textContent = published;
-  document.getElementById("statDrafts").textContent = drafts;
-  document.getElementById("statTags").textContent = allTags.size;
+  document.getElementById("statPublished").textContent  = published;
+  document.getElementById("statDrafts").textContent     = drafts;
+  document.getElementById("statTags").textContent       = allTags.size;
 
   const recent = [...allPosts].slice(0, 8);
   document.getElementById("recentPostsList").innerHTML = recent.map(p => `
