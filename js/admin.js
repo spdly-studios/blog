@@ -11,6 +11,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
@@ -178,14 +179,23 @@ function generateCoverUrl(slug) {
 }
 
 function syncCoverUrl() {
-  if (coverManuallyEdited) return;
   const slug = document.getElementById("postSlugInput").value.trim();
   const url = generateCoverUrl(slug);
-  if (!url) return;
-
   const coverInput = document.getElementById("postCoverInput");
-  coverInput.value = url;
-  updateCoverPreview(url);
+  const coverHint = document.getElementById("coverUrlHint");
+
+  if (!slug) {
+    if (!coverManuallyEdited) coverInput.value = "";
+    coverHint.textContent = "Cover image URL auto-generates once the slug is set.";
+    updateCoverPreview(coverInput.value.trim());
+    return;
+  }
+
+  coverHint.textContent = `Auto URL: ${url}`;
+  if (!coverManuallyEdited || !coverInput.value.trim()) {
+    coverInput.value = url;
+    updateCoverPreview(url);
+  }
 }
 
 function updateCoverPreview(url) {
@@ -197,10 +207,55 @@ function updateCoverPreview(url) {
   }
 }
 
+function cleanTextForSummary(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]*`/g, "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/[#>*\-+]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function generateOneLineSummary(title, content) {
+  const raw = `${title} ${content}`.trim();
+  const clean = cleanTextForSummary(raw);
+  if (!clean) return "";
+
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  let summary = sentences[0].trim();
+
+  if (summary.length > 140) {
+    const truncated = summary.slice(0, 140);
+    const lastSpace = truncated.lastIndexOf(" ");
+    summary = (lastSpace > 80 ? truncated.slice(0, lastSpace) : truncated).trim();
+    summary += "...";
+  }
+
+  if (summary.length < 25 && clean.length > summary.length) {
+    const fallback = clean.slice(0, 120);
+    const lastSpace = fallback.lastIndexOf(" ");
+    summary = `${fallback.slice(0, lastSpace)}...`;
+  }
+
+  return summary;
+}
+
+function updateContentMetrics() {
+  const content = document.getElementById("postContentInput").value.trim();
+  const words = content ? content.replace(/\n/g, " ").trim().split(/\s+/).filter(Boolean).length : 0;
+  const minutes = Math.max(1, Math.ceil(words / 180));
+  document.getElementById("wordCountIndicator").textContent = `${words} word${words === 1 ? "" : "s"}`;
+  document.getElementById("readingTimeIndicator").textContent = `${minutes} min read`;
+}
+
 // Mark cover as manually edited when the user types in it
 document.getElementById("postCoverInput").addEventListener("input", e => {
   coverManuallyEdited = true;
   updateCoverPreview(e.target.value.trim());
+  const coverHint = document.getElementById("coverUrlHint");
+  coverHint.textContent = "Manual cover URL override active. Click Reset to restore the auto-generated URL.";
 });
 
 // Refresh button — re-generate URL discarding manual edit
@@ -346,65 +401,175 @@ const TAG_RULES = {
   "engineering": [
     "engineer", "architect", "architecture", "system design", "backend", "frontend",
     "software", "build", "compile", "deploy", "ci/cd", "pipeline", "microservice",
-    "monolith", "refactor", "codebase", "scalab", "performance", "latency"
+    "monolith", "refactor", "codebase", "scalability", "performance", "latency",
+    "cache", "database", "server", "infra", "infrastructure"
   ],
   "algorithms": [
     "algorithm", "complexity", "o(n)", "big o", "sort", "search", "graph",
     "tree", "dynamic programming", "recursion", "binary", "hash", "heap",
-    "bfs", "dfs", "greedy", "divide and conquer", "data structure"
+    "bfs", "dfs", "greedy", "divide and conquer", "data structure", "optimization"
   ],
   "devlog": [
     "devlog", "today i", "this week", "working on", "progress update",
     "sprint", "milestone", "shipped", "just pushed", "day ", "week ",
-    "building my", "making a", "started", "finished", "completed"
+    "building my", "making a", "started", "finished", "completed", "launch"
   ],
   "discovery": [
     "discover", "found out", "realized", "interesting", "learned",
     "didn't know", "surprising", "unexpected", "rabbit hole", "turns out",
-    "fascinating", "fun fact", "came across", "stumbled"
+    "fascinating", "fun fact", "came across", "stumbled", "insight"
   ],
   "tools": [
     "tool", "cli", "utility", "plugin", "extension", "library", "framework",
     "package", "npm", "pip", "brew", "cargo", "workflow", "automation",
-    "makefile", "dockerfile", "config", "dotfile"
+    "makefile", "dockerfile", "config", "dotfile", "script", "editor"
   ],
   "web": [
     "html", "css", "javascript", "browser", "http", "api", "rest", "graphql",
     "dom", "react", "vue", "angular", "nextjs", "svelte", "astro",
     "typescript", "jsx", "tsx", "tailwind", "fetch", "cors", "webhook",
-    "firebase", "vercel", "netlify", "cloudflare"
+    "firebase", "vercel", "netlify", "cloudflare", "frontend", "backend", "responsive"
   ],
   "linux": [
     "linux", "bash", "shell", "terminal", "unix", "grep", "awk", "sed",
     "systemd", "kernel", "debian", "ubuntu", "arch", "fedora", "chmod",
-    "crontab", "tmux", "vim", "neovim", "zsh", "fish", "posix"
+    "crontab", "tmux", "vim", "neovim", "zsh", "fish", "posix", "bashrc"
   ],
   "networks": [
     "network", "tcp", "udp", "ip", "dns", "http", "socket", "protocol",
     "packet", "firewall", "proxy", "vpn", "bandwidth", "latency", "ping",
-    "ssl", "tls", "certificate", "cdn", "load balanc", "nginx", "reverse proxy"
+    "ssl", "tls", "certificate", "cdn", "nginx", "reverse proxy", "load balancer"
+  ],
+  "security": [
+    "security", "auth", "authentication", "authorization", "encryption",
+    "vulnerability", "xss", "csrf", "csp", "secure", "ssl", "tls", "audit"
+  ],
+  "cloud": [
+    "cloud", "aws", "azure", "gcp", "serverless", "kubernetes", "docker",
+    "containers", "infrastructure", "terraform", "ci/cd", "deployment", "docker-compose"
   ]
 };
 
-function inferTagsFromContent(title, content) {
-  const text = `${title} ${content}`.toLowerCase();
-  const suggested = [];
+const STOP_WORDS = new Set([
+  "the", "and", "for", "with", "that", "this", "from", "into", "about",
+  "when", "where", "which", "while", "your", "their", "there", "then",
+  "what", "will", "can", "have", "has", "had", "not", "but", "are",
+  "was", "were", "been", "being", "its", "also", "more", "most", "some",
+  "such", "than", "them", "they", "these", "those", "using", "used",
+  "use", "into", "over", "under", "after", "before", "because", "through"
+]);
+
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function phrasePresent(fullText, phrase) {
+  const cleaned = phrase.toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
+  if (!cleaned) return false;
+  const regex = new RegExp(`\\b${cleaned.replace(/\\s+/g, "\\s+")}\\b`, "i");
+  return regex.test(fullText);
+}
+
+function scoreTagsFromContent(title, excerpt, content) {
+  const text = `${title} ${excerpt} ${content}`.toLowerCase();
+  const words = normalizeText(text);
+  const counts = words.reduce((acc, word) => {
+    if (!STOP_WORDS.has(word) && word.length > 2) {
+      acc[word] = (acc[word] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const suggestions = [];
 
   for (const [tag, keywords] of Object.entries(TAG_RULES)) {
-    const score = keywords.filter(kw => text.includes(kw)).length;
-    if (score >= 1) {
-      suggested.push({ tag, score });
+    let score = 0;
+
+    if (phrasePresent(title, tag)) score += 4;
+    if (phrasePresent(excerpt, tag)) score += 2;
+
+    for (const keyword of keywords) {
+      if (phrasePresent(text, keyword)) {
+        score += 2;
+      }
+      const normalized = keyword.toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
+      if (normalized && counts[normalized]) {
+        score += counts[normalized];
+      }
+    }
+
+    if (score > 0) {
+      suggestions.push({ tag, score });
     }
   }
 
-  // Sort by score descending, return top tags
-  return suggested
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map(s => s.tag);
+  return { suggestions, counts };
 }
 
-async function autoTagPost() {
+function extractCustomTags(counts) {
+  return Object.entries(counts)
+    .filter(([word, frequency]) => frequency >= 3 && word.length > 4 && !Object.keys(TAG_RULES).includes(word))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([word]) => word);
+}
+
+function inferTagsFromContent(title, content, excerpt = "") {
+  const { suggestions, counts } = scoreTagsFromContent(title, excerpt, content);
+
+  const ordered = suggestions
+    .sort((a, b) => b.score - a.score || a.tag.localeCompare(b.tag))
+    .slice(0, 5)
+    .map(item => item.tag);
+
+  if (ordered.length >= 2) {
+    return ordered;
+  }
+
+  const custom = extractCustomTags(counts);
+  const fallback = [...ordered, ...custom].slice(0, 6);
+
+  if (fallback.length) {
+    return fallback;
+  }
+
+  const titleWords = normalizeText(title).filter(word => word.length > 3 && !STOP_WORDS.has(word));
+  return titleWords.slice(0, 3).map(word => word.replace(/\s+/g, "-"));
+}
+
+function getTopKeywords(text, limit = 3) {
+  const words = normalizeText(text);
+  const counts = words.reduce((acc, word) => {
+    if (!STOP_WORDS.has(word) && word.length > 3) {
+      acc[word] = (acc[word] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([word]) => word);
+}
+
+function getSummarySentences(content) {
+  const clean = cleanTextForSummary(content);
+  if (!clean) return [];
+  return clean.match(/[^.!?]+[.!?]+/g) || [clean];
+}
+
+function smartTruncate(text, maxLength = 130) {
+  if (text.length <= maxLength) return text;
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return `${truncated.slice(0, lastSpace > 30 ? lastSpace : maxLength).trim()}...`;
+}
+
+function autoTagPost() {
   const title   = document.getElementById("postTitleInput").value.trim();
   const content = document.getElementById("postContentInput").value.trim();
   const excerpt = document.getElementById("postExcerptInput").value.trim();
@@ -414,79 +579,48 @@ async function autoTagPost() {
     return;
   }
 
-  const btn = document.getElementById("autoTagBtn");
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Analysing…";
-
-  try {
-    // Phase 1: keyword analysis (instant, always runs)
-    const keywordTags = inferTagsFromContent(title, `${content} ${excerpt}`);
-
-    // Phase 2: Anthropic AI for richer analysis (optional, graceful fallback)
-    let aiTags = [];
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 200,
-          system: "You are a blog post tagger. Return ONLY a valid JSON array of lowercase tag strings. No explanation, no markdown, no extra text. Maximum 6 tags.",
-          messages: [{
-            role: "user",
-            content: `Suggest tags for this blog post. Prefer from this list if applicable: engineering, algorithms, devlog, discovery, tools, web, linux, networks. You may add 1-2 custom tags not in the list if strongly relevant.
-
-Title: ${title}
-Excerpt: ${excerpt}
-Content (first 1500 chars): ${content.substring(0, 1500)}`
-          }]
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const raw = (data.content || []).find(b => b.type === "text")?.text || "[]";
-        aiTags = JSON.parse(raw.replace(/```json|```/g, "").trim());
-      }
-    } catch (_) {
-      // AI unavailable — keyword analysis is enough
-    }
-
-    // Merge: AI tags take priority, then keyword tags, deduped
-    const merged = [...new Set([...aiTags, ...keywordTags])].slice(0, 6);
-
-    if (merged.length === 0) {
-      showToast("Couldn't infer tags — add them manually", "error");
-      return;
-    }
-
-    // Add suggested tags (skip ones already present)
-    let added = 0;
-    merged.forEach(t => {
-      const clean = t.toLowerCase().trim().replace(/\s+/g, "-");
-      if (clean && !tags.includes(clean)) {
-        tags.push(clean);
-        added++;
-      }
-    });
-    renderTagsList();
-
-    if (added > 0) {
-      showToast(`Added ${added} tag${added > 1 ? "s" : ""} from content analysis`);
-    } else {
-      showToast("All suggested tags already added");
-    }
-
-  } catch (err) {
-    console.error("Auto-tag error:", err);
-    showToast("Auto-tag failed", "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+  const suggested = inferTagsFromContent(title, content, excerpt);
+  if (!suggested.length) {
+    showToast("No relevant tags inferred; try adding keywords", "error");
+    return;
   }
+
+  let added = 0;
+  suggested.forEach(tag => {
+    const clean = tag.toLowerCase().trim().replace(/\s+/g, "-");
+    if (clean && !tags.includes(clean)) {
+      tags.push(clean);
+      added++;
+    }
+  });
+
+  renderTagsList();
+  showToast(added ? `Added ${added} tag${added > 1 ? "s" : ""}` : "Suggested tags already present");
+}
+
+function autoSummaryPost() {
+  const title   = document.getElementById("postTitleInput").value.trim();
+  const content = document.getElementById("postContentInput").value.trim();
+  const excerpt = document.getElementById("postExcerptInput").value.trim();
+
+  if (!title && !content) {
+    showToast("Add a title or content first", "error");
+    return;
+  }
+
+  const summary = generateOneLineSummary(title, content, excerpt);
+  if (!summary) {
+    showToast("Could not generate a one-line summary", "error");
+    return;
+  }
+
+  document.getElementById("postExcerptInput").value = summary;
+  updateSeoPreview();
+  showToast("One-line summary generated");
 }
 
 document.getElementById("autoTagBtn").addEventListener("click", autoTagPost);
+document.getElementById("autoSummaryBtn").addEventListener("click", autoSummaryPost);
 
 // ============================================================
 // EDITOR — SLUG AUTO-GENERATE
@@ -506,11 +640,18 @@ titleInput.addEventListener("input", () => {
 slugInput.addEventListener("input", () => {
   slugManuallyEdited = true;
   syncCoverUrl();
+  updateSeoPreview();
 });
 
 document.getElementById("postExcerptInput").addEventListener("input", updateSeoPreview);
+document.getElementById("postContentInput").addEventListener("input", () => {
+  updateContentMetrics();
+  updateSeoPreview();
+});
 
 function updateSeoPreview() {
+  const slug = slugInput.value.trim() || "post";
+  document.querySelector(".seo-url").textContent = `blog.spdly.is-a.dev › ${slug}`;
   document.getElementById("seoTitle").textContent =
     titleInput.value || "Post title";
   document.getElementById("seoDesc").textContent =
@@ -623,6 +764,8 @@ async function loadPostForEdit(id) {
     updateCoverPreview(post.coverImage || "");
     renderTagsList();
     updateSeoPreview();
+    updateContentMetrics();
+    syncCoverUrl();
 
     // Reset preview mode
     previewMode = false;
@@ -657,6 +800,8 @@ function resetEditor() {
   document.getElementById("coverPreview").innerHTML = "";
   renderTagsList();
   updateSeoPreview();
+  updateContentMetrics();
+  syncCoverUrl();
   previewMode = false;
   editorTextarea.classList.remove("hidden");
   editorPreview.classList.add("hidden");
@@ -668,13 +813,31 @@ function resetEditor() {
 // ============================================================
 async function savePost(status) {
   const title      = document.getElementById("postTitleInput").value.trim();
-  const slug       = document.getElementById("postSlugInput").value.trim();
-  const excerpt    = document.getElementById("postExcerptInput").value.trim();
-  const coverImage = document.getElementById("postCoverInput").value.trim();
+  let slug         = document.getElementById("postSlugInput").value.trim();
+  let excerpt      = document.getElementById("postExcerptInput").value.trim();
+  let coverImage   = document.getElementById("postCoverInput").value.trim();
   const content    = document.getElementById("postContentInput").value.trim();
 
   if (!title)   { showToast("Title is required", "error"); return; }
   if (!content) { showToast("Content is required", "error"); return; }
+
+  if (!slug) {
+    slug = slugify(title);
+    document.getElementById("postSlugInput").value = slug;
+  }
+
+  if (!excerpt) {
+    excerpt = generateOneLineSummary(title, content);
+    document.getElementById("postExcerptInput").value = excerpt;
+  }
+
+  if (!coverImage && slug) {
+    coverImage = generateCoverUrl(slug);
+    if (!coverManuallyEdited) {
+      document.getElementById("postCoverInput").value = coverImage;
+      updateCoverPreview(coverImage);
+    }
+  }
 
   const btn = status === "published"
     ? document.getElementById("publishBtn")
@@ -697,13 +860,19 @@ async function savePost(status) {
     };
 
     if (editingPostId) {
+      const existing = await getDoc(doc(db, "posts", editingPostId));
+      const previousStatus = existing.data()?.status;
+
       if (status === "published") {
-        const existing = await getDoc(doc(db, "posts", editingPostId));
-        if (existing.data()?.status !== "published") {
+        if (previousStatus !== "published") {
           postData.publishedAt = now;
         }
+      } else if (previousStatus === "published") {
+        postData.publishedAt = deleteField();
       }
+
       await updateDoc(doc(db, "posts", editingPostId), postData);
+      document.getElementById("postStatusInput").value = status;
       showToast(status === "published" ? "Post published!" : "Draft saved!");
     } else {
       if (status === "published") postData.publishedAt = now;
@@ -711,6 +880,7 @@ async function savePost(status) {
       const newDoc = await addDoc(collection(db, "posts"), postData);
       editingPostId = newDoc.id;
       document.getElementById("editPostId").value = newDoc.id;
+      document.getElementById("postStatusInput").value = status;
       showToast(status === "published" ? "Post published!" : "Draft saved!");
     }
 

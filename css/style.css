@@ -1,5 +1,5 @@
 /* ============================================================
-   SPDLY.LOG — SHARED STYLES
+   SPDLY.BLOG — SHARED STYLES
    Tech-minimal, IBM Plex Mono, dark/light
    ============================================================ */
 
@@ -497,7 +497,8 @@ input, textarea, select {
 .post-card-cover {
   width: 100%;
   aspect-ratio: 16/9;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--bg-3);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   margin-bottom: var(--space-xs);
@@ -654,11 +655,13 @@ input, textarea, select {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border);
+  background: var(--bg-3);
 }
 .post-cover img {
   width: 100%;
-  max-height: 420px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
 
 /* POST BODY — Markdown-rendered content */

@@ -54,7 +54,8 @@
     }
 
     /* ── Auto-tag button ── */
-    .btn-auto-tag {
+    .btn-auto-tag,
+    .btn-auto-summary {
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -68,16 +69,33 @@
       transition: color .15s, border-color .15s, background .15s;
       margin-bottom: 8px;
     }
-    .btn-auto-tag:hover {
+    .btn-auto-tag:hover,
+    .btn-auto-summary:hover {
       color: var(--accent);
       border-color: var(--accent);
     }
-    .btn-auto-tag:disabled {
+    .btn-auto-tag:disabled,
+    .btn-auto-summary:disabled {
       opacity: .5;
       cursor: not-allowed;
     }
-    .btn-auto-tag .tag-sparkle {
+    .btn-auto-tag .tag-sparkle,
+    .btn-auto-summary .tag-sparkle {
       font-size: 14px;
+    }
+    .editor-metrics {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 8px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .editor-metrics span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
   </style>
 </head>
@@ -94,7 +112,7 @@
     <!-- SIDEBAR -->
     <aside class="admin-sidebar" id="adminSidebar">
       <div class="sidebar-top">
-        <a href="/" class="admin-logo" target="_blank">spdly<span class="accent">.log</span></a>
+        <a href="/" class="admin-logo" target="_blank">spdly<span class="accent">.blog</span></a>
         <button class="sidebar-close" id="sidebarClose">✕</button>
       </div>
       <nav class="sidebar-nav">
@@ -184,6 +202,9 @@
 
             <div class="form-group">
               <label class="form-label">Excerpt / Summary *</label>
+              <button type="button" class="btn-auto-summary" id="autoSummaryBtn" title="Generate a one-line summary from title and content">
+                <span class="tag-sparkle">Σ</span> Auto summary
+              </button>
               <textarea class="form-input" id="postExcerptInput" rows="2" placeholder="A brief summary shown on post cards..."></textarea>
             </div>
 
@@ -224,6 +245,10 @@
               <div class="editor-pane-wrap">
                 <textarea class="form-input editor-textarea" id="postContentInput" placeholder="Write your post in Markdown...&#10;&#10;Supports **bold**, _italic_, `code`, ```code blocks```, headers, links, images, and blockquotes."></textarea>
                 <div class="editor-preview hidden" id="editorPreview"></div>
+              </div>
+              <div class="editor-metrics">
+                <span id="wordCountIndicator">0 words</span>
+                <span id="readingTimeIndicator">0 min read</span>
               </div>
             </div>
 

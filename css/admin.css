@@ -1,5 +1,5 @@
 /* ============================================================
-   SPDLY.LOG — ADMIN STYLES
+   SPDLY.BLOG — ADMIN STYLES
    ============================================================ */
 
 /* ============================================================
@@ -564,11 +564,12 @@ textarea.form-input { resize: vertical; line-height: 1.6; }
   margin-top: var(--space-sm);
   border-radius: var(--radius);
   overflow: hidden;
+  background: var(--bg-3);
 }
 .cover-preview img {
-  max-height: 160px;
   width: 100%;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }

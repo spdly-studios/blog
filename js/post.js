@@ -203,7 +203,7 @@ async function loadPost() {
 // ============================================================
 function renderPost(post) {
   // Update document meta
-  document.title = `${post.title} — spdly.log`;
+  document.title = `${post.title} — spdly.blog`;
   document.querySelector("meta[name='description']").setAttribute("content", post.excerpt || "");
   document.getElementById("canonicalTag").setAttribute("href", `https://blog.spdly.is-a.dev/post.html?id=${post.id}`);
 
@@ -340,7 +340,7 @@ async function loadRelated(post) {
 function showError() {
   document.getElementById("postLoading").classList.add("hidden");
   document.getElementById("postError").classList.remove("hidden");
-  document.title = "Post Not Found — spdly.log";
+  document.title = "Post Not Found — spdly.blog";
 }
 
 // ============================================================
