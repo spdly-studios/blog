@@ -213,6 +213,7 @@ function cleanTextForSummary(text) {
     .replace(/`[^`]*`/g, "")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/^#{1,6}\s+.+$/gm, "") // Remove markdown headers completely
     .replace(/[#>*\-+]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -395,58 +396,91 @@ document.querySelectorAll(".tag-pill-btn").forEach(btn => {
 });
 
 // ============================================================
-// AUTO-TAGGER — Keyword analysis
+// AUTO-TAGGER — Intelligent TF-IDF + N-gram analysis
 // ============================================================
 const TAG_RULES = {
   "engineering": [
     "engineer", "architect", "architecture", "system design", "backend", "frontend",
     "software", "build", "compile", "deploy", "ci/cd", "pipeline", "microservice",
     "monolith", "refactor", "codebase", "scalability", "performance", "latency",
-    "cache", "database", "server", "infra", "infrastructure"
+    "cache", "database", "server", "infra", "infrastructure", "api design",
+    "service oriented", "event driven", "message queue", "pubsub", "async"
   ],
   "algorithms": [
     "algorithm", "complexity", "o(n)", "big o", "sort", "search", "graph",
     "tree", "dynamic programming", "recursion", "binary", "hash", "heap",
-    "bfs", "dfs", "greedy", "divide and conquer", "data structure", "optimization"
+    "bfs", "dfs", "greedy", "divide and conquer", "data structure", "optimization",
+    "backtracking", "memoization", "bit manipulation", "trie", "segment tree"
   ],
   "devlog": [
     "devlog", "today i", "this week", "working on", "progress update",
     "sprint", "milestone", "shipped", "just pushed", "day ", "week ",
-    "building my", "making a", "started", "finished", "completed", "launch"
+    "building my", "making a", "started", "finished", "completed", "launch",
+    "side project", "hackathon", "prototype", "mvp", "iteration"
   ],
   "discovery": [
     "discover", "found out", "realized", "interesting", "learned",
     "didn't know", "surprising", "unexpected", "rabbit hole", "turns out",
-    "fascinating", "fun fact", "came across", "stumbled", "insight"
+    "fascinating", "fun fact", "came across", "stumbled", "insight",
+    "deep dive", "exploration", "investigation", "research"
   ],
   "tools": [
     "tool", "cli", "utility", "plugin", "extension", "library", "framework",
     "package", "npm", "pip", "brew", "cargo", "workflow", "automation",
-    "makefile", "dockerfile", "config", "dotfile", "script", "editor"
+    "makefile", "dockerfile", "config", "dotfile", "script", "editor",
+    "ide", "vscode", "intellij", "linter", "formatter", "prettier"
   ],
   "web": [
     "html", "css", "javascript", "browser", "http", "api", "rest", "graphql",
     "dom", "react", "vue", "angular", "nextjs", "svelte", "astro",
     "typescript", "jsx", "tsx", "tailwind", "fetch", "cors", "webhook",
-    "firebase", "vercel", "netlify", "cloudflare", "frontend", "backend", "responsive"
+    "firebase", "vercel", "netlify", "cloudflare", "frontend", "backend", "responsive",
+    "pwa", "spa", "ssr", "ssg", "hydration", "bundle", "webpack", "vite"
   ],
   "linux": [
     "linux", "bash", "shell", "terminal", "unix", "grep", "awk", "sed",
     "systemd", "kernel", "debian", "ubuntu", "arch", "fedora", "chmod",
-    "crontab", "tmux", "vim", "neovim", "zsh", "fish", "posix", "bashrc"
+    "crontab", "tmux", "vim", "neovim", "zsh", "fish", "posix", "bashrc",
+    "pipe", "redirect", "environment variable", "shebang", "process"
   ],
   "networks": [
     "network", "tcp", "udp", "ip", "dns", "http", "socket", "protocol",
     "packet", "firewall", "proxy", "vpn", "bandwidth", "latency", "ping",
-    "ssl", "tls", "certificate", "cdn", "nginx", "reverse proxy", "load balancer"
+    "ssl", "tls", "certificate", "cdn", "nginx", "reverse proxy", "load balancer",
+    "websocket", "http/2", "http/3", "quic", "dns over https"
   ],
   "security": [
     "security", "auth", "authentication", "authorization", "encryption",
-    "vulnerability", "xss", "csrf", "csp", "secure", "ssl", "tls", "audit"
+    "vulnerability", "xss", "csrf", "csp", "secure", "ssl", "tls", "audit",
+    "jwt", "oauth", "session", "cookie", "hash", "salt", "penetration test"
   ],
   "cloud": [
     "cloud", "aws", "azure", "gcp", "serverless", "kubernetes", "docker",
-    "containers", "infrastructure", "terraform", "ci/cd", "deployment", "docker-compose"
+    "containers", "infrastructure", "terraform", "ci/cd", "deployment", "docker-compose",
+    "lambda", "functions", "ec2", "s3", "rds", "cloudfront", "route53"
+  ],
+  "database": [
+    "database", "sql", "nosql", "mysql", "postgresql", "mongodb", "redis",
+    "elasticsearch", "index", "query", "migration", "orm", "transaction",
+    "sharding", "replication", "backup", "restore", "schema"
+  ],
+  "ai-ml": [
+    "machine learning", "ai", "artificial intelligence", "neural network",
+    "deep learning", "model", "training", "inference", "tensorflow", "pytorch",
+    "nlp", "computer vision", "classification", "regression", "clustering"
+  ],
+  "mobile": [
+    "mobile", "ios", "android", "react native", "flutter", "swift",
+    "kotlin", "app store", "play store", "push notification", "responsive"
+  ],
+  "testing": [
+    "test", "testing", "unit test", "integration test", "e2e", "jest",
+    "cypress", "playwright", "mock", "stub", "coverage", "tdd", "bdd"
+  ],
+  "design": [
+    "design", "ui", "ux", "user interface", "user experience", "figma",
+    "sketch", "prototype", "wireframe", "accessibility", "a11y", "color",
+    "typography", "layout", "component", "design system"
   ]
 };
 
@@ -456,7 +490,9 @@ const STOP_WORDS = new Set([
   "what", "will", "can", "have", "has", "had", "not", "but", "are",
   "was", "were", "been", "being", "its", "also", "more", "most", "some",
   "such", "than", "them", "they", "these", "those", "using", "used",
-  "use", "into", "over", "under", "after", "before", "because", "through"
+  "use", "into", "over", "under", "after", "before", "because", "through",
+  "just", "like", "get", "got", "know", "knows", "make", "made", "see",
+  "saw", "come", "came", "want", "wants", "need", "needs", "take", "took"
 ]);
 
 function normalizeText(text) {
@@ -467,16 +503,42 @@ function normalizeText(text) {
     .filter(Boolean);
 }
 
+function extractNGrams(words, n) {
+  const ngrams = [];
+  for (let i = 0; i <= words.length - n; i++) {
+    const ngram = words.slice(i, i + n).join(" ");
+    if (ngram.split(" ").every(w => w.length > 2 && !STOP_WORDS.has(w))) {
+      ngrams.push(ngram);
+    }
+  }
+  return ngrams;
+}
+
 function phrasePresent(fullText, phrase) {
   const cleaned = phrase.toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
   if (!cleaned) return false;
-  const regex = new RegExp(`\\b${cleaned.replace(/\\s+/g, "\\s+")}\\b`, "i");
+  const regex = new RegExp(`\\b${cleaned.replace(/\s+/g, "\\s+")}\\b`, "i");
   return regex.test(fullText);
 }
 
+function calculateTFIDF(word, wordCount, totalWords, docFrequency) {
+  const tf = wordCount / totalWords;
+  const idf = Math.log(1 + (1 / (docFrequency + 1)));
+  return tf * idf;
+}
+
 function scoreTagsFromContent(title, excerpt, content) {
+  const titleLower = title.toLowerCase();
+  const excerptLower = excerpt.toLowerCase();
+  const contentLower = content.toLowerCase();
+  
   const text = `${title} ${excerpt} ${content}`.toLowerCase();
   const words = normalizeText(text);
+  const totalWords = words.length;
+  
+  const bigrams = extractNGrams(words, 2);
+  const trigrams = extractNGrams(words, 3);
+  
   const counts = words.reduce((acc, word) => {
     if (!STOP_WORDS.has(word) && word.length > 2) {
       acc[word] = (acc[word] || 0) + 1;
@@ -488,41 +550,99 @@ function scoreTagsFromContent(title, excerpt, content) {
 
   for (const [tag, keywords] of Object.entries(TAG_RULES)) {
     let score = 0;
+    let matchCount = 0;
 
-    if (phrasePresent(title, tag)) score += 4;
-    if (phrasePresent(excerpt, tag)) score += 2;
+    // Title has highest weight
+    if (phrasePresent(titleLower, tag)) {
+      score += 8;
+      matchCount++;
+    }
+    
+    // Excerpt has medium-high weight
+    if (phrasePresent(excerptLower, tag)) {
+      score += 4;
+      matchCount++;
+    }
 
+    // Check keywords with TF-IDF weighting
     for (const keyword of keywords) {
-      if (phrasePresent(text, keyword)) {
-        score += 2;
+      const keywordLower = keyword.toLowerCase();
+      
+      // Direct phrase match
+      if (phrasePresent(text, keywordLower)) {
+        const keywordWords = normalizeText(keywordLower);
+        const avgWordCount = keywordWords.reduce((sum, w) => sum + (counts[w] || 0), 0) / keywordWords.length;
+        score += 3 + avgWordCount;
+        matchCount++;
       }
-      const normalized = keyword.toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
+
+      // Check for individual word matches
+      const normalized = keywordLower.replace(/[^a-z0-9\s]/g, " ").trim();
       if (normalized && counts[normalized]) {
-        score += counts[normalized];
+        const tfidf = calculateTFIDF(normalized, counts[normalized], totalWords, 1);
+        score += tfidf * 5;
+      }
+    }
+
+    // Bonus for multiple matches
+    if (matchCount >= 3) score += 5;
+    if (matchCount >= 5) score += 5;
+
+    // N-gram bonus
+    for (const bigram of bigrams) {
+      if (phrasePresent(text, bigram) && keywords.some(k => phrasePresent(k, bigram))) {
+        score += 4;
+      }
+    }
+    
+    for (const trigram of trigrams) {
+      if (phrasePresent(text, trigram) && keywords.some(k => phrasePresent(k, trigram))) {
+        score += 6;
       }
     }
 
     if (score > 0) {
-      suggestions.push({ tag, score });
+      suggestions.push({ tag, score, matchCount });
     }
   }
 
-  return { suggestions, counts };
+  return { suggestions, counts, bigrams, trigrams };
 }
 
-function extractCustomTags(counts) {
-  return Object.entries(counts)
+function extractCustomTags(counts, bigrams, trigrams) {
+  const customTags = [];
+  
+  // Extract high-frequency single words
+  const frequentWords = Object.entries(counts)
     .filter(([word, frequency]) => frequency >= 3 && word.length > 4 && !Object.keys(TAG_RULES).includes(word))
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
+    .slice(0, 2)
     .map(([word]) => word);
+  
+  customTags.push(...frequentWords);
+  
+  // Extract meaningful bigrams
+  const bigramCounts = {};
+  for (const bigram of bigrams) {
+    bigramCounts[bigram] = (bigramCounts[bigram] || 0) + 1;
+  }
+  
+  const frequentBigrams = Object.entries(bigramCounts)
+    .filter(([bigram, count]) => count >= 2 && bigram.length > 8)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([bigram]) => bigram.replace(/\s+/g, "-"));
+  
+  customTags.push(...frequentBigrams);
+  
+  return customTags.slice(0, 4);
 }
 
 function inferTagsFromContent(title, content, excerpt = "") {
-  const { suggestions, counts } = scoreTagsFromContent(title, excerpt, content);
+  const { suggestions, counts, bigrams, trigrams } = scoreTagsFromContent(title, excerpt, content);
 
   const ordered = suggestions
-    .sort((a, b) => b.score - a.score || a.tag.localeCompare(b.tag))
+    .sort((a, b) => b.score - a.score || b.matchCount - a.matchCount || a.tag.localeCompare(b.tag))
     .slice(0, 5)
     .map(item => item.tag);
 
@@ -530,7 +650,7 @@ function inferTagsFromContent(title, content, excerpt = "") {
     return ordered;
   }
 
-  const custom = extractCustomTags(counts);
+  const custom = extractCustomTags(counts, bigrams, trigrams);
   const fallback = [...ordered, ...custom].slice(0, 6);
 
   if (fallback.length) {
@@ -541,7 +661,7 @@ function inferTagsFromContent(title, content, excerpt = "") {
   return titleWords.slice(0, 3).map(word => word.replace(/\s+/g, "-"));
 }
 
-function getTopKeywords(text, limit = 3) {
+function getTopKeywords(text, limit = 5) {
   const words = normalizeText(text);
   const counts = words.reduce((acc, word) => {
     if (!STOP_WORDS.has(word) && word.length > 3) {
@@ -567,6 +687,157 @@ function smartTruncate(text, maxLength = 130) {
   const truncated = text.slice(0, maxLength);
   const lastSpace = truncated.lastIndexOf(" ");
   return `${truncated.slice(0, lastSpace > 30 ? lastSpace : maxLength).trim()}...`;
+}
+
+let summaryGenerationCount = 0;
+
+function calculateSentenceScore(sentence, keywords, position, totalSentences, strategy = "balanced") {
+  const words = normalizeText(sentence);
+  let score = 0;
+  
+  // Filter out meta/introduction words - very aggressive filtering
+  const metaWords = ["introduction", "overview", "summary", "abstract", "preface", "preamble", "note", "warning", "conclusion", "background", "context"];
+  const lowerSentence = sentence.toLowerCase().trim();
+  
+  // Check if sentence starts with meta words
+  if (metaWords.some(mw => lowerSentence.startsWith(mw))) score -= 100;
+  // Check if sentence contains meta words anywhere
+  else if (metaWords.some(mw => lowerSentence.includes(mw))) score -= 50;
+  
+  // Filter out sentences that start with section headers
+  if (/^(##+|#{1,6}\s)/.test(sentence)) score -= 30;
+  
+  // Filter out sentences that start with "In this" or similar meta phrases
+  const metaPhrases = ["in this", "in this article", "in this post", "in this blog", "this article", "this post", "this blog", "here we", "we will", "we'll"];
+  if (metaPhrases.some(mp => lowerSentence.startsWith(mp))) score -= 40;
+  
+  // Different strategies for variety
+  if (strategy === "early") {
+    // Bias toward early sentences
+    if (position === 0) score += 25;
+    if (position === 1) score += 20;
+    if (position === 2) score += 15;
+    if (position < 5) score += (5 - position) * 3;
+  } else if (strategy === "middle") {
+    // Bias toward middle sentences (skip intro)
+    if (position >= 2 && position <= 6) score += 20;
+    if (position === 0) score -= 10;
+    if (position === 1) score -= 5;
+  } else if (strategy === "keyword") {
+    // Bias toward keyword-rich sentences
+    const keywordMatches = words.filter(w => keywords.includes(w)).length;
+    score += keywordMatches * 5;
+  } else {
+    // Balanced approach
+    if (position === 0) score += 15;
+    if (position === 1) score += 12;
+    if (position === 2) score += 8;
+    const keywordMatches = words.filter(w => keywords.includes(w)).length;
+    score += keywordMatches * 2;
+  }
+  
+  // Length optimization: prefer medium-length sentences
+  const length = words.length;
+  if (length >= 8 && length <= 20) score += 5;
+  if (length < 5) score -= 10;
+  if (length > 25) score -= 5;
+  
+  // Penalty for sentences with arrows/symbols (technical diagrams)
+  if (/[→←]/.test(sentence)) score -= 20;
+  
+  // Penalty for sentences with too many numbers (likely data/technical)
+  const numberCount = (sentence.match(/\d/g) || []).length;
+  if (numberCount > 3) score -= 10;
+  
+  // Bonus for sentences with "is", "are", "was" (descriptive sentences)
+  if (/\b(is|are|was|were|be|been)\b/i.test(sentence)) score += 3;
+  
+  // Bonus for sentences that start with common summary words
+  const summaryStarters = ["this", "the", "a", "an", "in", "today", "recently", "currently", "many", "most", "some"];
+  if (summaryStarters.some(s => sentence.trim().toLowerCase().startsWith(s))) score += 2;
+  
+  return score;
+}
+
+function extractKeySentences(content, maxSentences = 2, strategy = "balanced") {
+  const sentences = getSummarySentences(content);
+  if (sentences.length === 0) return [];
+  
+  const keywords = getTopKeywords(content, 8);
+  
+  const scored = sentences.map((sentence, index) => ({
+    sentence: sentence.trim(),
+    score: calculateSentenceScore(sentence, keywords, index, sentences.length, strategy),
+    index
+  }));
+  
+  // Sort by score and take top sentences
+  const topSentences = scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxSentences);
+  
+  // Re-sort by original position to maintain flow
+  return topSentences.sort((a, b) => a.index - b.index).map(s => s.sentence);
+}
+
+function generateIntelligentSummary(title, content, excerpt = "") {
+  const cleanContent = cleanTextForSummary(content);
+  
+  if (!cleanContent) return "";
+  
+  // Cycle through strategies for variety
+  summaryGenerationCount++;
+  const strategies = ["early", "middle", "keyword", "balanced"];
+  const strategy = strategies[(summaryGenerationCount - 1) % strategies.length];
+  
+  const sentences = getSummarySentences(cleanContent);
+  
+  // Aggressively filter out meta sentences from the list
+  const metaWords = ["introduction", "overview", "summary", "abstract", "preface", "preamble", "note", "warning", "conclusion", "background", "context"];
+  const metaPhrases = ["in this", "in this article", "in this post", "in this blog", "this article", "this post", "this blog", "here we", "we will", "we'll"];
+  
+  const filteredSentences = sentences.filter(sentence => {
+    const lower = sentence.toLowerCase().trim();
+    return !metaWords.some(mw => lower.includes(mw)) && 
+           !metaPhrases.some(mp => lower.startsWith(mp)) &&
+           !/[→←]/.test(sentence);
+  });
+  
+  // Strategy 1: Extract best sentences from filtered list using current strategy
+  if (filteredSentences.length > 0) {
+    const keySentences = extractKeySentences(filteredSentences.join(" "), 2, strategy);
+    if (keySentences.length > 0) {
+      let summary = keySentences[0];
+      
+      // If first is too short, combine with second
+      if (summary.length < 40 && keySentences.length > 1) {
+        summary = `${summary} ${keySentences[1]}`;
+      }
+      
+      if (summary.length > 30 && summary.length < 200) {
+        return smartTruncate(summary, 150);
+      }
+    }
+  }
+  
+  // Strategy 2: Use first non-meta sentence
+  if (filteredSentences.length > 0) {
+    const firstSentence = filteredSentences[0].trim();
+    if (firstSentence.length > 30 && firstSentence.length < 200) {
+      return smartTruncate(firstSentence, 150);
+    }
+  }
+  
+  // Strategy 3: Use title-based summary
+  const titleWords = normalizeText(title);
+  if (titleWords.length >= 3) {
+    const titleSummary = titleWords.slice(0, 6).join(" ");
+    return titleSummary.charAt(0).toUpperCase() + titleSummary.slice(1);
+  }
+  
+  // Final fallback: first 100 characters (after removing meta words)
+  const fallbackClean = cleanContent.replace(new RegExp(metaWords.join("|"), "gi"), "").trim();
+  return smartTruncate(fallbackClean, 100);
 }
 
 function autoTagPost() {
@@ -608,15 +879,15 @@ function autoSummaryPost() {
     return;
   }
 
-  const summary = generateOneLineSummary(title, content, excerpt);
+  const summary = generateIntelligentSummary(title, content, excerpt);
   if (!summary) {
-    showToast("Could not generate a one-line summary", "error");
+    showToast("Could not generate a summary", "error");
     return;
   }
 
   document.getElementById("postExcerptInput").value = summary;
   updateSeoPreview();
-  showToast("One-line summary generated");
+  showToast("Intelligent summary generated");
 }
 
 document.getElementById("autoTagBtn").addEventListener("click", autoTagPost);
@@ -827,7 +1098,7 @@ async function savePost(status) {
   }
 
   if (!excerpt) {
-    excerpt = generateOneLineSummary(title, content);
+    excerpt = generateIntelligentSummary(title, content);
     document.getElementById("postExcerptInput").value = excerpt;
   }
 
